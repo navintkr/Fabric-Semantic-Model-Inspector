@@ -66,8 +66,12 @@ def list_modified_workspaces(modified_since: datetime | None) -> list[str]:
     """
     params = {"excludePersonalWorkspaces": "true"}
     if modified_since is not None:
-        # ISO 8601 with Z suffix, no fractional seconds
-        params["modifiedSince"] = modified_since.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        # The admin API requires the 7-digit fractional-seconds ISO 8601 format
+        # (e.g. 2026-03-21T19:22:16.0000000Z) and, when modifiedSince is provided,
+        # excludeInActiveWorkspaces must also be set.
+        ts = modified_since.astimezone(timezone.utc).replace(microsecond=0)
+        params["modifiedSince"] = ts.strftime("%Y-%m-%dT%H:%M:%S.0000000Z")
+        params["excludeInActiveWorkspaces"] = "true"
     r = requests.get(f"{PBI}/admin/workspaces/modified", headers=headers(), params=params, timeout=120)
     r.raise_for_status()
     data = r.json()
@@ -149,6 +153,15 @@ def flatten(scan: dict, out_dir: Path) -> None:
     table_rows, col_rows, measure_rows = [], [], []
     expr_rows, datasource_rows, upstream_rows = [], [], []
     user_rows = []
+    dsi_rows = []
+
+    for dsi in scan.get("datasourceInstances", []) or []:
+        dsi_rows.append({
+            "datasourceId": dsi.get("datasourceId"),
+            "datasourceType": dsi.get("datasourceType"),
+            "gatewayId": dsi.get("gatewayId"),
+            "connectionDetails": json.dumps(dsi.get("connectionDetails") or {}),
+        })
 
     for ws in scan.get("workspaces", []) or []:
         wid = ws.get("id")
@@ -301,6 +314,7 @@ def flatten(scan: dict, out_dir: Path) -> None:
     dump("measures", measure_rows)
     dump("expressions", expr_rows)
     dump("datasources", datasource_rows)
+    dump("datasource_instances", dsi_rows)
     dump("upstream", upstream_rows)
     dump("users", user_rows)
 
