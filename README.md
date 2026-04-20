@@ -8,6 +8,10 @@ Useful for:
 - Capturing the M (Power Query) transformations for review or source control.
 - Generating an inventory before a migration or re-platforming.
 
+> **Need tenant-wide coverage (all workspaces, reports, lineage, users) without being added to each workspace?**
+> Use [`fabric_tenant_scanner.py`](fabric_tenant_scanner.py) instead — it calls the Power BI **Admin Scanner API**.
+> Setup steps are in [TENANT_SCANNER_SETUP.md](TENANT_SCANNER_SETUP.md).
+
 ---
 
 ## How it works
